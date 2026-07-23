@@ -1,7 +1,6 @@
---extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.2.0
-torchvision==0.17.0
 streamlit
+torch
+torchvision
 langchain
 langchain-community
 langchain-groq
