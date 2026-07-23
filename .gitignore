@@ -1,0 +1,35 @@
+STREAMING_CHUNK:Ignoring environment files and secret keys...
+
+.env
+.env.*
+!.env.example
+
+STREAMING_CHUNK:Ignoring Python bytecode and cache files...
+
+pycache/
+*.py[cod]
+*$py.class
+*.so
+
+STREAMING_CHUNK:Ignoring virtual environments...
+
+venv/
+.venv/
+env/
+ENV/
+
+STREAMING_CHUNK:Ignoring Chroma vector database directory and uploads...
+
+chroma_db/
+data/
+
+STREAMING_CHUNK:Ignoring Streamlit local config and secrets...
+
+.streamlit/secrets.toml
+
+STREAMING_CHUNK:Ignoring IDE and OS temporary files...
+
+.vscode/
+.idea/
+.DS_Store
+*.tmp

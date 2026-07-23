@@ -1,0 +1,12 @@
+langchain
+streamlit
+langchain-core
+langchain-community
+pypdf
+sentence-transformers
+langchain-huggingface
+chromadb
+langchain-google-genai
+langchain-groq
+python-dotenv
+rank-bm25
