@@ -14,6 +14,13 @@ Nexus RAG — Intelligent Document Assistant
 """
 
 import streamlit as st
+import textwrap as _tw
+_orig_md = st.markdown
+def _md(body="", unsafe_allow_html=False, **kw):
+    if isinstance(body, str) and unsafe_allow_html:
+        body = _tw.dedent(body)
+    return _orig_md(body, unsafe_allow_html=unsafe_allow_html, **kw)
+st.markdown = _md
 import os
 import time
 from pathlib import Path
@@ -594,8 +601,7 @@ st.markdown(
         <div>
             <h1 class="app-hero-title">مساعد الوثائق الذكي</h1>
             <div class="app-hero-sub">
-                اسأل بلغتك الطبيعية عن محتوى مستنداتك — نستخدم استرجاعًا هجينًا (Hybrid Retrieval)
-                لضمان إجابات دقيقة مدعومة بالمصادر من نصوصك المرفوعة فقط.
+                اسأل بلغتك الطبيعية — إجابات دقيقة من مستنداتك، موثّقة بالمصادر.
             </div>
         </div>
         <span class="pill">RAG · Hybrid Retrieval</span>
