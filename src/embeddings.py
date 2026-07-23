@@ -1,14 +1,13 @@
+import streamlit as st
 from langchain_huggingface import HuggingFaceEmbeddings
 from src.config import EMBEDDING_MODEL_NAME, EMBEDDING_BATCH_SIZE
 
 
+@st.cache_resource(show_spinner=False)
 def get_embedding_function() -> HuggingFaceEmbeddings:
     """
-    تحميل نموذج الـ Embeddings المجاني والمحلي.
-
-    ملاحظة مهمة للجودة: normalize_embeddings=True ضروري هنا —
-    بدونه تصبح مقارنة التشابه (cosine/L2) غير متسقة بين المتجهات
-    المختلفة الأطوال، مما يُفسد ترتيب نتائج الاسترجاع.
+    تحميل نموذج الـ Embeddings وتخزينه في الذاكرة المؤقتة (Cache)
+    لتجنب استهلاك الـ RAM وإعادة تحميل النموذج عند كل استفسار.
     """
     embeddings = HuggingFaceEmbeddings(
         model_name=EMBEDDING_MODEL_NAME,
