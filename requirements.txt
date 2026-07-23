@@ -10,3 +10,5 @@ langchain-google-genai
 langchain-groq
 python-dotenv
 rank-bm25
+qdrant-client
+langchain-qdrant
