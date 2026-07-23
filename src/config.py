@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ---------------------------------------------------------
-# إعداد الـ Logging (بدل الـ except: pass الصامتة في باقي الملفات)
+# إعداد الـ Logging
 # ---------------------------------------------------------
 logging.basicConfig(
     level=logging.INFO,
@@ -22,12 +22,21 @@ DATA_DIR = BASE_DIR / "data"
 CHROMA_PATH = BASE_DIR / "chroma_db"
 
 # ---------------------------------------------------------
-# مفتاح Groq
+# قراءة مفتاح Groq (يدعم البيئة المحلية و Streamlit Cloud Secrets)
 # ---------------------------------------------------------
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
+if not GROQ_API_KEY:
+    try:
+        import streamlit as st
+        if "GROQ_API_KEY" in st.secrets:
+            GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
+    except Exception:
+        pass
+
 if not GROQ_API_KEY:
     logger.warning(
-        "GROQ_API_KEY غير موجود في ملف .env — لن يعمل توليد الإجابات حتى يتم ضبطه."
+        "GROQ_API_KEY غير موجود في ملف .env أو Streamlit Secrets — لن يعمل توليد الإجابات حتى يتم ضبطه."
     )
 
 # ---------------------------------------------------------
@@ -43,29 +52,16 @@ CHUNK_SIZE = 800
 CHUNK_OVERLAP = 200
 
 # ---------------------------------------------------------
-# إعدادات الاسترجاع (Retrieval) — هذا هو ما كان مفقودًا
-# ويتحكم مباشرة في جودة النتائج المسترجعة
+# إعدادات الاسترجاع (Retrieval)
 # ---------------------------------------------------------
-# عدد النتائج النهائي الذي يُرسل إلى الـ LLM
 TOP_K = 4
-
-# عدد المرشحين الذي يُجلب من كل مصدر (Vector / BM25) *قبل* الدمج
-# لازم يكون أكبر من TOP_K عشان الـ RRF يقدر يدمج بذكاء
 FETCH_K = 15
-
-# ثابت الـ Reciprocal Rank Fusion (القيمة القياسية في الأبحاث = 60)
 RRF_K = 60
-
-# حد أدنى لدرجة التشابه (0 إلى 1) — أي نتيجة أضعف من كده تُستبعد
-# لأن معناها إنها مش ذات صلة فعلية بالسؤال
 SIMILARITY_SCORE_THRESHOLD = 0.25
-
-# استخدام MMR (Maximal Marginal Relevance) لتنويع النتائج
-# وتقليل التكرار بدل جلب مقاطع شبه متطابقة
 USE_MMR = True
-MMR_LAMBDA = 0.5  # 0 = تنويع كامل، 1 = تشابه كامل مع السؤال
+MMR_LAMBDA = 0.5
 
 # ---------------------------------------------------------
-# نموذج Groq (سريع للغاية ومجاني)
+# نموذج Groq
 # ---------------------------------------------------------
 GROQ_LLM_MODEL = "llama-3.3-70b-versatile"
