@@ -12,7 +12,7 @@ from src.rag_engine import generate_rag_response
 # إعداد الصفحة
 # ============================================================
 st.set_page_config(
-    page_title="Nexus RAG | مساعد الوثائق الذكي",
+    page_title="Nexus RAG — Document Intelligence",
     page_icon="🧠",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -21,7 +21,7 @@ st.set_page_config(
 os.makedirs(DATA_DIR, exist_ok=True)
 
 # ============================================================
-# الحالة (Session State)
+# الحالة (Session State) — الأسماء محفوظة كما هي
 # ============================================================
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
@@ -35,302 +35,444 @@ if "theme" not in st.session_state:
     st.session_state.theme = "dark"
 
 # ============================================================
-# رموز الألوان والتصميم (Theme Dictionary)
+# نظام الألوان (Design Tokens)
 # ============================================================
 THEMES = {
     "dark": {
-        "bg": "#090B10", "bg-2": "#0F1219",
-        "surface": "#141824", "surface-alt": "#1B202F", "surface-hover": "#22293C",
-        "border": "#283044", "border-strong": "#39435C",
-        "text": "#F3F4F6", "text-muted": "#9CA3AF", "text-dim": "#6B7280",
-        "accent": "#F59E0B", "accent-2": "#D97706",
-        "accent-soft": "rgba(245, 158, 11, 0.15)", "accent-glow": "rgba(245, 158, 11, 0.3)",
-        "user-bubble": "#1E2536", "assistant-bubble": "#111520",
-        "success": "#10B981", "danger": "#EF4444",
-        "logo-bg": "#141824",
+        "bg": "#09090B",
+        "surface": "#18181B",
+        "card": "#202127",
+        "card-hover": "#26272E",
+        "border": "rgba(255,255,255,0.06)",
+        "border-strong": "rgba(255,255,255,0.12)",
+        "text": "#FAFAFA",
+        "muted": "#A1A1AA",
+        "dim": "#71717A",
+        "primary": "#6366F1",
+        "primary-hover": "#4F46E5",
+        "primary-soft": "rgba(99,102,241,0.12)",
+        "primary-ring": "rgba(99,102,241,0.35)",
+        "success": "#22C55E",
+        "danger": "#EF4444",
+        "user-bubble": "linear-gradient(135deg, #4F46E5 0%, #6366F1 100%)",
+        "user-bubble-text": "#FAFAFA",
+        "assistant-bubble": "#18181B",
         "scheme": "dark",
     },
     "light": {
-        "bg": "#F9FAFB", "bg-2": "#F3F4F6",
-        "surface": "#FFFFFF", "surface-alt": "#F3F4F6", "surface-hover": "#E5E7EB",
-        "border": "#E5E7EB", "border-strong": "#D1D5DB",
-        "text": "#111827", "text-muted": "#4B5563", "text-dim": "#9CA3AF",
-        "accent": "#D97706", "accent-2": "#B45309",
-        "accent-soft": "rgba(217, 119, 6, 0.12)", "accent-glow": "rgba(217, 119, 6, 0.25)",
-        "user-bubble": "#F3F4F6", "assistant-bubble": "#FFFFFF",
-        "success": "#059669", "danger": "#DC2626",
-        "logo-bg": "#FFFFFF",
+        "bg": "#FAFAFA",
+        "surface": "#FFFFFF",
+        "card": "#FFFFFF",
+        "card-hover": "#F4F4F5",
+        "border": "rgba(0,0,0,0.06)",
+        "border-strong": "rgba(0,0,0,0.12)",
+        "text": "#111827",
+        "muted": "#6B7280",
+        "dim": "#9CA3AF",
+        "primary": "#4F46E5",
+        "primary-hover": "#4338CA",
+        "primary-soft": "rgba(79,70,229,0.10)",
+        "primary-ring": "rgba(79,70,229,0.25)",
+        "success": "#16A34A",
+        "danger": "#DC2626",
+        "user-bubble": "linear-gradient(135deg, #4F46E5 0%, #6366F1 100%)",
+        "user-bubble-text": "#FFFFFF",
+        "assistant-bubble": "#FFFFFF",
         "scheme": "light",
     },
 }
 
 _theme = THEMES[st.session_state.theme]
-_root_vars = "\n".join([f"            --{k}: {v};" for k, v in _theme.items() if k != "scheme"])
+_root_vars = "\n".join(
+    [f"            --{k}: {v};" for k, v in _theme.items() if k != "scheme"]
+)
 
 # ============================================================
-# اللوجو
+# اللوجو — علامة Nexus مبسّطة (شبكة معرفة)
 # ============================================================
-def get_nexus_logo(size: int = 45, circle_bg: str = "#1A1E29") -> str:
+def get_nexus_logo(size: int = 32) -> str:
     return f"""
-<svg width="{size}" height="{size}" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-    <linearGradient id="ng" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stop-color="#F5B84A"/>
-        <stop offset="100%" stop-color="#E8873D"/>
+<svg width="{size}" height="{size}" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="lg-nx" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#818CF8"/>
+      <stop offset="100%" stop-color="#4F46E5"/>
     </linearGradient>
-    </defs>
-    <circle cx="32" cy="32" r="30" fill="{circle_bg}" stroke="url(#ng)" stroke-width="1.5"/>
-    <line x1="32" y1="32" x2="14" y2="14" stroke="#F5B84A" stroke-width="1.2" opacity="0.7"/>
-    <line x1="32" y1="32" x2="50" y2="14" stroke="#F5B84A" stroke-width="1.2" opacity="0.7"/>
-    <line x1="32" y1="32" x2="12" y2="40" stroke="#F5B84A" stroke-width="1.2" opacity="0.7"/>
-    <line x1="32" y1="32" x2="52" y2="42" stroke="#F5B84A" stroke-width="1.2" opacity="0.7"/>
-    <line x1="32" y1="32" x2="30" y2="56" stroke="#F5B84A" stroke-width="1.2" opacity="0.7"/>
-    <circle cx="14" cy="14" r="3.5" fill="#F5B84A"/>
-    <circle cx="50" cy="14" r="3.5" fill="#F5B84A"/>
-    <circle cx="12" cy="40" r="3.5" fill="#F5B84A"/>
-    <circle cx="52" cy="42" r="3.5" fill="#F5B84A"/>
-    <circle cx="30" cy="56" r="3.5" fill="#F5B84A"/>
-    <circle cx="32" cy="32" r="8" fill="url(#ng)"/>
-    <circle cx="32" cy="32" r="8" fill="none" stroke="{circle_bg}" stroke-width="2"/>
+  </defs>
+  <rect x="1" y="1" width="38" height="38" rx="10" fill="url(#lg-nx)"/>
+  <circle cx="20" cy="20" r="4" fill="#FFFFFF"/>
+  <circle cx="10" cy="10" r="2.2" fill="#FFFFFF" opacity="0.95"/>
+  <circle cx="30" cy="10" r="2.2" fill="#FFFFFF" opacity="0.95"/>
+  <circle cx="10" cy="30" r="2.2" fill="#FFFFFF" opacity="0.95"/>
+  <circle cx="30" cy="30" r="2.2" fill="#FFFFFF" opacity="0.95"/>
+  <line x1="20" y1="20" x2="10" y2="10" stroke="#FFFFFF" stroke-width="1.4" opacity="0.8"/>
+  <line x1="20" y1="20" x2="30" y2="10" stroke="#FFFFFF" stroke-width="1.4" opacity="0.8"/>
+  <line x1="20" y1="20" x2="10" y2="30" stroke="#FFFFFF" stroke-width="1.4" opacity="0.8"/>
+  <line x1="20" y1="20" x2="30" y2="30" stroke="#FFFFFF" stroke-width="1.4" opacity="0.8"/>
 </svg>
 """
 
-NEXUS_LOGO_SVG = get_nexus_logo(circle_bg=_theme["logo-bg"])
+NEXUS_LOGO_SVG = get_nexus_logo(32)
 
 # ============================================================
-# حقن CSS المخصص
-# تم وضع نصوص الـ HTML بدون مسافات بادئة لتجنب تحولها إلى أكواد في Markdown
+# CSS — تصميم SaaS بسيط وأنيق
 # ============================================================
 CUSTOM_CSS = f"""
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Inter:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
     :root {{
 {_root_vars}
         color-scheme: {_theme["scheme"]};
     }}
-    
-    /* التهيئة الأساسية ودعم اللغة العربية */
+
+    /* ============ التهيئة العامة ============ */
     html, body, [class*="css"], [class*="st-"] {{
-        font-family: 'Cairo', 'Inter', sans-serif !important;
-        direction: rtl;
-        text-align: right;
+        font-family: 'Inter', 'Cairo', -apple-system, BlinkMacSystemFont, sans-serif !important;
     }}
-    
+    * {{
+        unicode-bidi: plaintext;
+    }}
     .stApp {{
-        background-color: var(--bg) !important;
+        background: var(--bg) !important;
         color: var(--text) !important;
     }}
-    
     header[data-testid="stHeader"] {{
         background: transparent !important;
+        height: 0 !important;
     }}
-    
-    /* الشريط الجانبي */
+    #MainMenu, footer {{ visibility: hidden; }}
+    .block-container {{
+        padding-top: 1.5rem !important;
+        padding-bottom: 6rem !important;
+        max-width: 900px !important;
+    }}
+
+    /* ============ الشريط الجانبي ============ */
     section[data-testid="stSidebar"] {{
-        background-color: var(--surface) !important;
-        border-left: 1px solid var(--border) !important;
+        background: var(--surface) !important;
+        border-right: 1px solid var(--border) !important;
     }}
-    
-    /* ترويسة العلامة التجارية */
-    .brand-container {{
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        padding: 10px 0 20px 0;
-        border-bottom: 1px solid var(--border);
-        margin-bottom: 20px;
-        direction: ltr;
-        text-align: left;
+    section[data-testid="stSidebar"] > div {{
+        padding-top: 1rem;
     }}
-    .brand-title {{
+
+    /* Brand */
+    .brand {{
+        display: flex; align-items: center; gap: 12px;
+        padding: 4px 4px 20px 4px;
+        margin-bottom: 8px;
+    }}
+    .brand-text {{ display: flex; flex-direction: column; line-height: 1; }}
+    .brand-name {{
         font-family: 'Inter', sans-serif !important;
-        font-size: 24px;
-        font-weight: 800;
-        color: var(--text);
-        margin: 0;
-        line-height: 1.1;
+        font-size: 17px; font-weight: 700; color: var(--text);
+        letter-spacing: -0.02em;
     }}
-    .brand-title span {{ color: var(--accent); }}
-    .brand-subtitle {{
-        font-size: 11px;
-        color: var(--text-muted);
-        letter-spacing: 1.5px;
-        text-transform: uppercase;
-        font-weight: 600;
+    .brand-tag {{
+        font-size: 10.5px; font-weight: 500; color: var(--muted);
+        letter-spacing: 0.08em; text-transform: uppercase;
         margin-top: 4px;
     }}
 
-    /* الترويسة الرئيسية */
-    .hero-section {{
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding-bottom: 20px;
-        border-bottom: 1px solid var(--border);
-        margin-bottom: 30px;
-        margin-top: -20px;
-    }}
-    .hero-title {{
-        font-size: 28px;
-        font-weight: 800;
-        color: var(--text);
-        margin: 0 0 8px 0;
-    }}
-    .hero-desc {{
-        font-size: 15px;
-        color: var(--text-muted);
-        margin: 0;
-    }}
-    .hero-badge {{
-        background: var(--accent-soft);
-        color: var(--accent);
-        border: 1px solid var(--accent-glow);
-        padding: 6px 14px;
-        border-radius: 50px;
-        font-size: 12px;
-        font-weight: 700;
-        direction: ltr;
-        font-family: 'Inter', sans-serif !important;
+    /* Section labels */
+    .side-label {{
+        font-size: 11px; font-weight: 600; color: var(--dim);
+        letter-spacing: 0.08em; text-transform: uppercase;
+        margin: 18px 4px 10px 4px;
     }}
 
-    /* الشاشة الترحيبية */
-    .welcome-box {{
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 16px;
-        padding: 40px;
-        text-align: center;
-        margin-top: 20px;
-        box-shadow: 0 10px 30px -10px rgba(0,0,0,0.1);
-    }}
-    .welcome-title {{
-        font-size: 24px;
-        font-weight: 700;
-        color: var(--text);
-        margin: 20px 0 10px 0;
-    }}
-    .welcome-text {{
-        color: var(--text-muted);
-        font-size: 15px;
-        margin-bottom: 30px;
-    }}
-    .features-grid {{
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 16px;
-    }}
-    .feature-card {{
-        background: var(--surface-alt);
-        border: 1px solid var(--border);
-        padding: 20px;
-        border-radius: 12px;
-    }}
-    .feature-icon {{ font-size: 28px; margin-bottom: 12px; }}
-    .feature-title {{ font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 6px; }}
-    .feature-desc {{ font-size: 13px; color: var(--text-muted); line-height: 1.6; }}
-
-    /* بطاقات الملفات */
+    /* File card */
     .file-card {{
-        background: var(--surface-alt);
+        background: var(--card);
         border: 1px solid var(--border);
-        border-right: 4px solid var(--accent);
-        border-radius: 10px;
-        padding: 12px;
-        margin-bottom: 10px;
-        display: flex;
-        flex-direction: column;
+        border-radius: 12px;
+        padding: 10px 12px;
+        display: flex; align-items: center; gap: 10px;
+        transition: all .18s ease;
     }}
+    .file-card:hover {{
+        background: var(--card-hover);
+        border-color: var(--border-strong);
+        transform: translateY(-1px);
+    }}
+    .file-icon {{
+        width: 32px; height: 32px; flex-shrink: 0;
+        background: var(--primary-soft);
+        color: var(--primary);
+        border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 15px; font-weight: 700;
+    }}
+    .file-body {{ flex: 1; min-width: 0; }}
     .file-name {{
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--text);
-        direction: ltr;
-        text-align: left;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        font-size: 12.5px; font-weight: 600; color: var(--text);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        direction: ltr; text-align: left;
     }}
     .file-meta {{
-        font-size: 11px;
-        color: var(--text-muted);
-        margin-top: 6px;
+        font-size: 11px; color: var(--muted); margin-top: 2px;
+        direction: ltr; text-align: left;
     }}
 
-    /* فقاعات المحادثة */
-    [data-testid="stChatMessage"] {{
-        background-color: var(--assistant-bubble) !important;
+    /* Delete button (small, ghost) */
+    div[data-testid="column"] .stButton > button[kind="secondary"],
+    .row-delete .stButton > button {{
+        background: transparent !important;
         border: 1px solid var(--border) !important;
-        border-radius: 16px !important;
-        padding: 20px !important;
-        margin-bottom: 16px !important;
+        color: var(--muted) !important;
+        border-radius: 10px !important;
+        padding: 6px 8px !important;
+        min-height: 38px !important;
+        font-size: 13px !important;
     }}
-    [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {{
-        background-color: var(--user-bubble) !important;
-        border-color: var(--accent-glow) !important;
-    }}
-    [data-testid="stChatMessage"] p {{
-        font-size: 15px !important;
-        line-height: 1.8 !important;
-        color: var(--text) !important;
+    .row-delete .stButton > button:hover {{
+        color: var(--danger) !important;
+        border-color: var(--danger) !important;
+        background: rgba(239,68,68,0.06) !important;
     }}
 
-    /* مصادر الإجابة */
-    .sources-container {{
-        margin-top: 16px;
-        padding-top: 16px;
-        border-top: 1px dashed var(--border);
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-    }}
-    .source-tag {{
-        background: var(--accent-soft);
-        color: var(--accent);
-        border: 1px solid var(--accent-glow);
-        padding: 4px 12px;
-        border-radius: 50px;
-        font-size: 12px;
-        font-weight: 600;
-        direction: ltr;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-    }}
-
-    /* أزرار Streamlit */
+    /* Streamlit button — default */
     .stButton > button {{
-        background-color: var(--surface-alt) !important;
+        background: var(--card) !important;
         color: var(--text) !important;
         border: 1px solid var(--border) !important;
-        border-radius: 8px !important;
-        font-weight: 600 !important;
-        transition: all 0.2s !important;
+        border-radius: 10px !important;
+        font-weight: 500 !important;
+        font-size: 13px !important;
+        padding: 8px 14px !important;
+        transition: all .18s ease !important;
+        box-shadow: none !important;
     }}
     .stButton > button:hover {{
-        border-color: var(--accent) !important;
-        color: var(--accent) !important;
-    }}
-    
-    /* زر الثيم تحديداً */
-    .theme-btn-container .stButton > button {{
-        background-color: var(--accent-soft) !important;
-        color: var(--accent) !important;
-        border: 1px solid var(--accent-glow) !important;
-        padding: 10px !important;
-    }}
-    .theme-btn-container .stButton > button:hover {{
-        background-color: var(--accent) !important;
-        color: #fff !important;
+        background: var(--card-hover) !important;
+        border-color: var(--border-strong) !important;
+        transform: translateY(-1px);
     }}
 
-    /* مربع إدخال النص */
-    [data-testid="stChatInput"] {{
-        background-color: var(--surface) !important;
+    /* Primary theme toggle */
+    .theme-toggle .stButton > button {{
+        background: var(--card) !important;
         border: 1px solid var(--border) !important;
-        border-radius: 12px !important;
+        color: var(--text) !important;
+        width: 100%;
+        display: flex; align-items: center; justify-content: center;
+        gap: 8px;
+        font-size: 13px !important;
+    }}
+    .theme-toggle .stButton > button:hover {{
+        border-color: var(--primary) !important;
+        color: var(--primary) !important;
+    }}
+
+    /* File uploader — modern dropzone */
+    [data-testid="stFileUploader"] section {{
+        background: var(--card) !important;
+        border: 1.5px dashed var(--border-strong) !important;
+        border-radius: 14px !important;
+        padding: 18px !important;
+        transition: all .2s ease !important;
+    }}
+    [data-testid="stFileUploader"] section:hover {{
+        border-color: var(--primary) !important;
+        background: var(--primary-soft) !important;
+    }}
+    [data-testid="stFileUploader"] small,
+    [data-testid="stFileUploader"] span {{
+        color: var(--muted) !important;
+        font-size: 12px !important;
+    }}
+    [data-testid="stFileUploader"] button {{
+        background: var(--primary) !important;
+        color: #fff !important;
+        border: none !important;
+        border-radius: 8px !important;
+        font-weight: 500 !important;
+    }}
+    [data-testid="stFileUploader"] button:hover {{
+        background: var(--primary-hover) !important;
+    }}
+    [data-testid="stFileUploaderDropzoneInstructions"] {{
+        color: var(--muted) !important;
+    }}
+
+    /* Status pill */
+    .status-row {{
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 8px 12px; border-radius: 10px;
+        background: var(--card); border: 1px solid var(--border);
+        margin-bottom: 6px;
+        font-size: 12px;
+    }}
+    .status-key {{ color: var(--muted); font-weight: 500; }}
+    .status-val {{ color: var(--text); font-weight: 600; direction: ltr; }}
+    .dot {{
+        display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+        margin-inline-end: 6px; vertical-align: middle;
+    }}
+    .dot-on {{ background: var(--success); box-shadow: 0 0 0 3px rgba(34,197,94,0.15); }}
+    .dot-off {{ background: var(--danger); box-shadow: 0 0 0 3px rgba(239,68,68,0.15); }}
+
+    /* Empty state — sidebar */
+    .empty-hint {{
+        border: 1px dashed var(--border-strong);
+        border-radius: 12px;
+        padding: 14px;
+        text-align: center;
+        color: var(--muted);
+        font-size: 12.5px;
+        background: transparent;
+    }}
+
+    /* ============ منطقة المحادثة ============ */
+    /* Compact top row */
+    .top-row {{
+        display: flex; align-items: center; justify-content: space-between;
+        margin-bottom: 18px;
+    }}
+    .top-title {{
+        font-size: 15px; font-weight: 600; color: var(--text);
+        display: flex; align-items: center; gap: 10px;
+    }}
+    .top-badge {{
+        font-size: 11px; font-weight: 500;
+        padding: 4px 10px; border-radius: 999px;
+        background: var(--primary-soft); color: var(--primary);
+        direction: ltr; letter-spacing: 0.02em;
+    }}
+
+    /* Empty chat state */
+    .empty-chat {{
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        text-align: center;
+        padding: 80px 20px 40px 20px;
+        color: var(--muted);
+    }}
+    .empty-chat h3 {{
+        color: var(--text); font-size: 22px; font-weight: 600;
+        margin: 18px 0 6px 0; letter-spacing: -0.01em;
+    }}
+    .empty-chat p {{
+        font-size: 14px; color: var(--muted); margin: 0;
+        max-width: 420px;
+    }}
+
+    /* Chat bubbles */
+    [data-testid="stChatMessage"] {{
+        background: transparent !important;
+        border: none !important;
+        padding: 6px 0 !important;
+        margin-bottom: 8px !important;
+        animation: fadeInUp .28s ease;
+    }}
+    [data-testid="stChatMessage"] [data-testid="stChatMessageContent"] {{
+        background: var(--assistant-bubble);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 14px 18px !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }}
+    /* User bubble: right-aligned, gradient */
+    [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {{
+        flex-direction: row-reverse;
+    }}
+    [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) [data-testid="stChatMessageContent"] {{
+        background: var(--user-bubble) !important;
+        border: none !important;
+        color: var(--user-bubble-text) !important;
+        max-width: 78%;
+        margin-left: auto;
+    }}
+    [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) [data-testid="stChatMessageContent"] * {{
+        color: var(--user-bubble-text) !important;
+    }}
+    [data-testid="stChatMessage"] p {{
+        font-size: 14.5px !important;
+        line-height: 1.75 !important;
+        margin: 0 !important;
+    }}
+    [data-testid="stChatMessageAvatar"] {{
+        border-radius: 10px !important;
+    }}
+
+    /* Source chips */
+    .sources {{
+        margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px;
+    }}
+    .chip {{
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 4px 10px; border-radius: 999px;
+        background: var(--primary-soft);
+        color: var(--primary);
+        border: 1px solid var(--primary-ring);
+        font-size: 11.5px; font-weight: 500;
+        direction: ltr;
+        transition: all .15s ease;
+    }}
+    .chip:hover {{ transform: translateY(-1px); }}
+
+    /* Chat input — floating */
+    [data-testid="stChatInput"] {{
+        background: var(--card) !important;
+        border: 1px solid var(--border-strong) !important;
+        border-radius: 16px !important;
+        box-shadow: 0 8px 24px -12px rgba(0,0,0,0.35) !important;
+        transition: all .2s ease !important;
     }}
     [data-testid="stChatInput"]:focus-within {{
-        border-color: var(--accent) !important;
+        border-color: var(--primary) !important;
+        box-shadow: 0 0 0 4px var(--primary-ring) !important;
+    }}
+    [data-testid="stChatInput"] textarea {{
+        color: var(--text) !important;
+        font-size: 14.5px !important;
+        font-family: 'Inter','Cairo',sans-serif !important;
+    }}
+    [data-testid="stChatInput"] textarea::placeholder {{
+        color: var(--dim) !important;
+    }}
+    [data-testid="stChatInput"] button {{
+        background: var(--primary) !important;
+        color: #fff !important;
+        border-radius: 10px !important;
+    }}
+    [data-testid="stChatInput"] button:hover {{
+        background: var(--primary-hover) !important;
+    }}
+
+    /* Divider */
+    hr, [data-testid="stSidebar"] hr {{
+        border-color: var(--border) !important;
+        margin: 14px 0 !important;
+    }}
+
+    /* Alerts */
+    [data-testid="stAlert"] {{
+        border-radius: 12px !important;
+        border: 1px solid var(--border) !important;
+        background: var(--card) !important;
+        font-size: 13px !important;
+    }}
+
+    /* Spinner */
+    .stSpinner > div {{ border-top-color: var(--primary) !important; }}
+
+    /* Animations */
+    @keyframes fadeInUp {{
+        from {{ opacity: 0; transform: translateY(6px); }}
+        to   {{ opacity: 1; transform: translateY(0); }}
+    }}
+
+    /* RTL handling for Arabic-only text nodes */
+    [data-testid="stChatMessage"] [data-testid="stChatMessageContent"] > div {{
+        unicode-bidi: plaintext;
+    }}
+
+    /* Responsive */
+    @media (max-width: 768px) {{
+        .block-container {{ padding: 1rem 0.75rem 6rem !important; }}
+        [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) [data-testid="stChatMessageContent"] {{
+            max-width: 90%;
+        }}
     }}
 </style>
 """
@@ -339,7 +481,7 @@ st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
 
 # ============================================================
-# منطق إدارة الملفات والفهرسة (بدون أي تعديل)
+# منطق إدارة الملفات والفهرسة — لم يتغيّر
 # ============================================================
 def rebuild_index():
     all_docs = []
@@ -359,11 +501,13 @@ def rebuild_index():
         st.session_state.all_chunks = []
         clear_vector_store()
 
+
 def add_file(uploaded_file) -> None:
     dest_path = DATA_DIR / uploaded_file.name
     with open(dest_path, "wb") as f:
         f.write(uploaded_file.getbuffer())
     st.session_state.file_registry[uploaded_file.name] = str(dest_path)
+
 
 def remove_file(filename: str) -> None:
     filepath = st.session_state.file_registry.pop(filename, None)
@@ -376,39 +520,39 @@ def remove_file(filename: str) -> None:
 
 
 # ============================================================
-# الشريط الجانبي (Sidebar)
+# الشريط الجانبي
 # ============================================================
 with st.sidebar:
-    # 1. العلامة التجارية
-    BRAND_HTML = f"""
-<div class="brand-container">
+    # Brand
+    st.markdown(
+        f"""
+<div class="brand">
     {NEXUS_LOGO_SVG}
-    <div>
-        <h1 class="brand-title">Nexus<span>RAG</span></h1>
-        <div class="brand-subtitle">Knowledge Hub</div>
+    <div class="brand-text">
+        <span class="brand-name">Nexus RAG</span>
+        <span class="brand-tag">Document Intelligence</span>
     </div>
 </div>
-"""
-    st.markdown(BRAND_HTML, unsafe_allow_html=True)
+""",
+        unsafe_allow_html=True,
+    )
 
-    # 2. زر تبديل الوضع الأنيق
-    st.markdown('<div class="theme-btn-container">', unsafe_allow_html=True)
-    theme_text = "☀️ تفعيل الوضع الفاتح" if st.session_state.theme == "dark" else "🌙 تفعيل الوضع الداكن"
-    if st.button(theme_text, use_container_width=True):
-        st.session_state.theme = "light" if st.session_state.theme == "dark" else "dark"
+    # Theme toggle
+    st.markdown('<div class="theme-toggle">', unsafe_allow_html=True)
+    is_dark = st.session_state.theme == "dark"
+    toggle_label = "☀️  Light mode" if is_dark else "🌙  Dark mode"
+    if st.button(toggle_label, use_container_width=True, key="theme_toggle"):
+        st.session_state.theme = "light" if is_dark else "dark"
         st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    st.divider()
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    # 3. مكتبة المستندات
-    st.markdown("### 📚 إدارة المستندات")
-    
+    # Upload
+    st.markdown('<div class="side-label">Upload</div>', unsafe_allow_html=True)
     uploaded_files = st.file_uploader(
-        "إضافة ملف (PDF أو TXT)",
+        "Upload documents",
         type=["pdf", "txt"],
         accept_multiple_files=True,
-        label_visibility="collapsed"
+        label_visibility="collapsed",
     )
 
     if uploaded_files:
@@ -421,156 +565,149 @@ with st.sidebar:
                 new_file_added = True
 
         if new_file_added:
-            with st.spinner("جاري فهرسة الملفات..."):
+            with st.spinner("Indexing documents..."):
                 rebuild_index()
             st.rerun()
 
-    st.markdown("---")
-    st.markdown("### 🗂️ الملفات الحالية")
+    # Documents
+    st.markdown('<div class="side-label">Documents</div>', unsafe_allow_html=True)
 
     if not st.session_state.file_registry:
-        st.info("📥 لم يتم رفع أي ملفات. يرجى رفع ملفات PDF أو TXT للبدء.")
+        st.markdown(
+            '<div class="empty-hint">No documents yet.<br>Upload a PDF or TXT to begin.</div>',
+            unsafe_allow_html=True,
+        )
     else:
         for filename in list(st.session_state.file_registry.keys()):
-            n_chunks = sum(1 for c in st.session_state.all_chunks if c.metadata.get("source") == filename)
-            
-            # عرض كل ملف مع زر الحذف بجانبه
-            col1, col2 = st.columns([5, 1])
+            n_chunks = sum(
+                1
+                for c in st.session_state.all_chunks
+                if c.metadata.get("source") == filename
+            )
+            ext = Path(filename).suffix.replace(".", "").upper() or "DOC"
+            col1, col2 = st.columns([6, 1])
             with col1:
-                FILE_CARD_HTML = f"""
+                st.markdown(
+                    f"""
 <div class="file-card" title="{filename}">
-    <div class="file-name">📄 {filename}</div>
-    <div class="file-meta">مقاطع مفهرسة: {n_chunks}</div>
+    <div class="file-icon">{ext[:3]}</div>
+    <div class="file-body">
+        <div class="file-name">{filename}</div>
+        <div class="file-meta">{n_chunks} chunks</div>
+    </div>
 </div>
-"""
-                st.markdown(FILE_CARD_HTML, unsafe_allow_html=True)
+""",
+                    unsafe_allow_html=True,
+                )
             with col2:
-                if st.button("🗑", key=f"remove_{filename}", help=f"إزالة {filename}"):
-                    with st.spinner("جاري التحديث..."):
+                st.markdown('<div class="row-delete">', unsafe_allow_html=True)
+                if st.button("✕", key=f"remove_{filename}", help=f"Remove {filename}"):
+                    with st.spinner("Updating..."):
                         remove_file(filename)
                     st.rerun()
+                st.markdown("</div>", unsafe_allow_html=True)
 
-    st.divider()
-    
-    # معلومات الحالة
-    total_chunks = len(st.session_state.all_chunks)
-    model_status = "متصل ✅" if GROQ_API_KEY else "غير متصل ❌"
-    
-    st.markdown(f"""
-    <div style="font-size: 13px; color: var(--text-muted); line-height: 2;">
-        <b>حالة النظام:</b><br>
-        المحرك (Groq): {model_status}<br>
-        إجمالي الملفات: {len(st.session_state.file_registry)}<br>
-        إجمالي المقاطع: {total_chunks}
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.write("")
+    # Status
+    st.markdown('<div class="side-label">Status</div>', unsafe_allow_html=True)
+    engine_on = bool(GROQ_API_KEY)
+    dot_class = "dot-on" if engine_on else "dot-off"
+    engine_txt = "Connected" if engine_on else "Offline"
+
+    st.markdown(
+        f"""
+<div class="status-row"><span class="status-key">Engine</span>
+  <span class="status-val"><span class="dot {dot_class}"></span>{engine_txt}</span></div>
+<div class="status-row"><span class="status-key">Files</span>
+  <span class="status-val">{len(st.session_state.file_registry)}</span></div>
+<div class="status-row"><span class="status-key">Chunks</span>
+  <span class="status-val">{len(st.session_state.all_chunks)}</span></div>
+""",
+        unsafe_allow_html=True,
+    )
+
+    # Settings — clear chat
     if st.session_state.chat_history:
-        if st.button("🧹 مسح المحادثة الحالية", use_container_width=True):
+        st.markdown('<div class="side-label">Settings</div>', unsafe_allow_html=True)
+        if st.button("🧹  Clear conversation", use_container_width=True, key="clear_chat"):
             st.session_state.chat_history = []
             st.rerun()
 
 
 # ============================================================
-# الواجهة الرئيسية (Main UI)
+# الواجهة الرئيسية
 # ============================================================
-HERO_HTML = """
-<div class="hero-section">
-    <div>
-        <h1 class="hero-title">مساعد الوثائق الذكي</h1>
-        <p class="hero-desc">اسأل بلغتك الطبيعية — إجابات دقيقة من مستنداتك، موثّقة بالمصادر.</p>
-    </div>
-    <div class="hero-badge">RAG · Hybrid Engine</div>
+st.markdown(
+    f"""
+<div class="top-row">
+    <div class="top-title">{NEXUS_LOGO_SVG}<span>Nexus RAG</span></div>
+    <div class="top-badge">Hybrid · Cited</div>
 </div>
-"""
-st.markdown(HERO_HTML, unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
-# 1. الشاشة الترحيبية (إذا لم يكن هناك محادثة)
+# Empty state
 if not st.session_state.chat_history:
-    WELCOME_HTML = f"""
-<div class="welcome-box">
-    {NEXUS_LOGO_SVG}
-    <h2 class="welcome-title">مرحباً بك في Nexus RAG</h2>
-    <p class="welcome-text">النظام جاهز. قم برفع مستنداتك من الشريط الجانبي ثم اطرح أسئلتك ليبدأ الاستخراج الذكي.</p>
-    
-    <div class="features-grid">
-        <div class="feature-card">
-            <div class="feature-icon">🎯</div>
-            <div class="feature-title">دقة متناهية</div>
-            <div class="feature-desc">إجابات مبنية حصرياً على محتوى المستندات المرفوعة لتجنب التأليف.</div>
-        </div>
-        <div class="feature-card">
-            <div class="feature-icon">🔗</div>
-            <div class="feature-title">توثيق المصادر</div>
-            <div class="feature-desc">كل إجابة مزودة بمرجع للملف ورقم الصفحة التي تم استخراجها منها.</div>
-        </div>
-        <div class="feature-card">
-            <div class="feature-icon">⚡</div>
-            <div class="feature-title">محرك بحث هجين</div>
-            <div class="feature-desc">يجمع بين قوة البحث الدلالي والبحث النصي لنتائج فائقة السرعة.</div>
-        </div>
-    </div>
+    st.markdown(
+        f"""
+<div class="empty-chat">
+    {get_nexus_logo(56)}
+    <h3>Ask your documents anything</h3>
+    <p>Upload PDFs or text files, then ask questions in Arabic or English. Answers are grounded in your sources.</p>
 </div>
-"""
-    st.markdown(WELCOME_HTML, unsafe_allow_html=True)
+""",
+        unsafe_allow_html=True,
+    )
 
-# 2. عرض سجل المحادثات
+# History
 for msg in st.session_state.chat_history:
-    with st.chat_message(msg["role"], avatar="🧠" if msg["role"] == "assistant" else "🧑"):
-        st.markdown(msg["content"])
-        
-        # عرض المصادر إن وجدت
+    with st.chat_message(
+        msg["role"], avatar="🧠" if msg["role"] == "assistant" else "🧑"
+    ):
+        st.markdown(f'<div dir="auto">{msg["content"]}</div>', unsafe_allow_html=True)
         if msg.get("sources"):
-            sources_html = '<div class="sources-container">'
-            for source in msg["sources"]:
-                sources_html += f'<div class="source-tag">📄 {source}</div>'
-            sources_html += '</div>'
-            st.markdown(sources_html, unsafe_allow_html=True)
+            chips = "".join(
+                [f'<span class="chip">📄 {s}</span>' for s in msg["sources"]]
+            )
+            st.markdown(f'<div class="sources">{chips}</div>', unsafe_allow_html=True)
 
-# 3. إدخال المستخدم
-query = st.chat_input("اكتب سؤالك هنا...")
+# Input
+query = st.chat_input("Ask a question about your documents…")
 
 if query:
     if not st.session_state.file_registry:
-        st.warning("⚠️ يرجى رفع ملف واحد على الأقل قبل طرح الأسئلة.")
+        st.warning("⚠️ Please upload at least one document before asking questions.")
     elif not GROQ_API_KEY:
-        st.error("⚠️ مفتاح GROQ_API_KEY غير مضبوط. لا يمكن توليد الإجابة.")
+        st.error("⚠️ GROQ_API_KEY is not set. Cannot generate an answer.")
     else:
-        # إضافة سؤال المستخدم
         st.session_state.chat_history.append({"role": "user", "content": query})
         with st.chat_message("user", avatar="🧑"):
-            st.markdown(query)
+            st.markdown(f'<div dir="auto">{query}</div>', unsafe_allow_html=True)
 
-        # توليد الإجابة
         with st.chat_message("assistant", avatar="🧠"):
-            with st.spinner("جاري البحث والتحليل..."):
+            with st.spinner("Searching and reasoning..."):
                 result = generate_rag_response(query, st.session_state.all_chunks)
                 answer = result["answer"]
                 sources = result.get("source_documents", [])
 
-                # تنسيق المصادر
                 source_labels = []
                 for doc in sources:
-                    src = doc.metadata.get("source", "مستند")
+                    src = doc.metadata.get("source", "document")
                     page = doc.metadata.get("page")
-                    label = f"{src}" + (f" · صفحة {page}" if page else "")
+                    label = f"{src}" + (f" · p.{page}" if page else "")
                     if label not in source_labels:
                         source_labels.append(label)
 
-            st.markdown(answer)
-            
-            # رسم رقاقات المصادر
-            if source_labels:
-                sources_html = '<div class="sources-container">'
-                for source in source_labels:
-                    sources_html += f'<div class="source-tag">📄 {source}</div>'
-                sources_html += '</div>'
-                st.markdown(sources_html, unsafe_allow_html=True)
+            st.markdown(f'<div dir="auto">{answer}</div>', unsafe_allow_html=True)
 
-        # الحفظ في سجل المحادثة
-        st.session_state.chat_history.append({
-            "role": "assistant", 
-            "content": answer, 
-            "sources": source_labels
-        })
+            if source_labels:
+                chips = "".join(
+                    [f'<span class="chip">📄 {s}</span>' for s in source_labels]
+                )
+                st.markdown(
+                    f'<div class="sources">{chips}</div>', unsafe_allow_html=True
+                )
+
+        st.session_state.chat_history.append(
+            {"role": "assistant", "content": answer, "sources": source_labels}
+        )
