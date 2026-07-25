@@ -224,22 +224,33 @@ font-size: 12px !important;
 }}
 [data-testid="stFileUploader"] button {{
 background: var(--primary) !important;
-color: #fff !important;
+color: transparent !important;
 border: none !important;
 border-radius: 8px !important;
 font-weight: 500 !important;
+font-size: 0 !important;
+line-height: 1 !important;
 transition: all .15s ease !important;
 display: inline-flex !important;
 align-items: center !important;
-gap: 6px !important;
+justify-content: center !important;
+gap: 0 !important;
+position: relative !important;
+min-width: 96px !important;
+min-height: 38px !important;
+padding: 8px 16px !important;
 }}
-[data-testid="stFileUploader"] button [data-testid="stIcon"],
-[data-testid="stFileUploader"] button span:first-child {{
+[data-testid="stFileUploader"] button * {{
 display: none !important;
 }}
-[data-testid="stFileUploader"] button span {{
-color: inherit !important;
+[data-testid="stFileUploader"] button::after {{
+content: "Upload";
+display: inline-block !important;
+color: #fff !important;
+font-size: 13px !important;
+font-weight: 600 !important;
 font-family: 'Inter', 'Cairo', sans-serif !important;
+white-space: nowrap;
 }}
 [data-testid="stFileUploaderDropzoneInstructions"] {{
 color: var(--muted) !important;
@@ -360,13 +371,21 @@ transition: all .2s ease !important;
 border-color: var(--primary) !important;
 box-shadow: 0 0 0 4px var(--primary-ring) !important;
 }}
+[data-testid="stChatInput"] textarea,
+[data-testid="stChatInput"] div {{
+background: var(--card) !important;
+background-color: var(--card) !important;
+}}
 [data-testid="stChatInput"] textarea {{
 color: var(--text) !important;
+-webkit-text-fill-color: var(--text) !important;
+caret-color: var(--text) !important;
 font-size: 14.5px !important;
 font-family: 'Inter','Cairo',sans-serif !important;
 }}
 [data-testid="stChatInput"] textarea::placeholder {{
 color: var(--dim) !important;
+-webkit-text-fill-color: var(--dim) !important;
 }}
 [data-testid="stChatInput"] button {{
 background: var(--primary) !important;
