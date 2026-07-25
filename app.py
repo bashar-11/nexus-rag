@@ -1,23 +1,8 @@
 import os
-import textwrap as _tw
-import streamlit as st
 from pathlib import Path
+import streamlit as st
 
-# ============================================================
-# إصلاح جذري لمشكلة "ظهور HTML كنص خام":
-# أي سطر داخل f-string يبدأ بأربع مسافات أو أكثر يُفسَّر من CommonMark
-# كـ "indented code block" فيُعرض حرفيًا بدل أن يُرسم كـ HTML.
-# هذا الـ monkeypatch يزيل أي مسافات بادئة تلقائيًا قبل التمرير لـ
-# st.markdown، كطبقة حماية إضافية فوق تنظيف المسافات في الكود نفسه.
-# ============================================================
-_original_markdown = st.markdown
-def _safe_markdown(body="", unsafe_allow_html=False, **kwargs):
-    if isinstance(body, str) and unsafe_allow_html:
-        body = _tw.dedent(body).strip("\n")
-    return _original_markdown(body, unsafe_allow_html=unsafe_allow_html, **kwargs)
-st.markdown = _safe_markdown
-
-# الحفاظ على كافة مسارات ومنطق الاستدعاءات كما هي — لا تغيير في الخلفية
+# الحفاظ على كافة مسارات ومنطق الاستدعاءات
 from src.config import DATA_DIR, GROQ_API_KEY, logger
 from src.document_loader import load_document, split_documents
 from src.vector_store import add_documents_to_vector_store, clear_vector_store
@@ -36,8 +21,7 @@ st.set_page_config(
 os.makedirs(DATA_DIR, exist_ok=True)
 
 # ============================================================
-# الحالة (Session State) — الأسماء محفوظة كما هي
-# (تمت إزالة "theme" نهائيًا: التطبيق دارك مود فقط الآن)
+# الحالة (Session State)
 # ============================================================
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
@@ -49,7 +33,7 @@ if "processed_upload_ids" not in st.session_state:
     st.session_state.processed_upload_ids = set()
 
 # ============================================================
-# نظام الألوان — دارك مود واحد فاخر (Palette من الطلب مباشرة)
+# نظام الألوان — Dark Mode
 # ============================================================
 TOKENS = {
     "bg": "#09090B",
@@ -74,7 +58,7 @@ TOKENS = {
 _root_vars = "\n".join([f"  --{k}: {v};" for k, v in TOKENS.items()])
 
 # ============================================================
-# اللوجو — علامة Nexus (شبكة معرفة مبسّطة)
+# اللوجو — علامة Nexus
 # ============================================================
 def get_nexus_logo(size: int = 32) -> str:
     return f"""<svg width="{size}" height="{size}" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -99,17 +83,14 @@ def get_nexus_logo(size: int = 32) -> str:
 NEXUS_LOGO_SVG = get_nexus_logo(32)
 
 # ============================================================
-# CSS — تصميم SaaS نظيف (ChatGPT / Claude / Linear / Raycast / Vercel)
-# كل الأسطر flush-left عمدًا لتفادي "indented code block" في Markdown
+# CSS — تصميم احترافي مع إزالة الأسطر الفارغة لمنع أخطاء Markdown
 # ============================================================
-CUSTOM_CSS = f"""<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+RAW_CSS = f"""<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {{
 {_root_vars}
 color-scheme: dark;
 }}
-
-/* ============ التهيئة العامة ============ */
 html, body, [class*="css"], [class*="st-"] {{
 font-family: 'Inter', 'Cairo', -apple-system, BlinkMacSystemFont, sans-serif !important;
 }}
@@ -128,8 +109,6 @@ padding-top: 1.5rem !important;
 padding-bottom: 6rem !important;
 max-width: 900px !important;
 }}
-
-/* ============ الشريط الجانبي ============ */
 section[data-testid="stSidebar"] {{
 background: var(--surface) !important;
 border-right: 1px solid var(--border) !important;
@@ -137,8 +116,6 @@ border-right: 1px solid var(--border) !important;
 section[data-testid="stSidebar"] > div {{
 padding-top: 1rem;
 }}
-
-/* Brand */
 .brand {{
 display: flex;
 align-items: center;
@@ -158,15 +135,11 @@ font-size: 10.5px; font-weight: 500; color: var(--muted);
 letter-spacing: 0.08em; text-transform: uppercase;
 margin-top: 2px;
 }}
-
-/* Section labels */
 .side-label {{
 font-size: 11px; font-weight: 600; color: var(--dim);
 letter-spacing: 0.08em; text-transform: uppercase;
 margin: 18px 4px 10px 4px;
 }}
-
-/* File card */
 .file-card {{
 background: var(--card);
 border: 1px solid var(--border);
@@ -198,8 +171,6 @@ direction: ltr; text-align: left;
 font-size: 11px; color: var(--muted); margin-top: 2px;
 direction: ltr; text-align: left;
 }}
-
-/* Delete button (small, ghost) */
 .row-delete .stButton > button {{
 background: transparent !important;
 border: 1px solid var(--border) !important;
@@ -214,8 +185,6 @@ color: var(--danger) !important;
 border-color: var(--danger) !important;
 background: rgba(239,68,68,0.08) !important;
 }}
-
-/* Streamlit button — default */
 .stButton > button {{
 background: var(--card) !important;
 color: var(--text) !important;
@@ -232,8 +201,6 @@ background: var(--card-hover) !important;
 border-color: var(--border-strong) !important;
 transform: translateY(-1px);
 }}
-
-/* File uploader — premium dropzone */
 [data-testid="stFileUploader"] section {{
 background: var(--card) !important;
 border: 1.5px dashed var(--border-strong) !important;
@@ -267,8 +234,6 @@ transform: translateY(-1px);
 [data-testid="stFileUploaderDropzoneInstructions"] {{
 color: var(--muted) !important;
 }}
-
-/* Status pill */
 .status-row {{
 display: flex; justify-content: space-between; align-items: center;
 padding: 8px 12px; border-radius: 10px;
@@ -284,8 +249,6 @@ margin-inline-end: 6px; vertical-align: middle;
 }}
 .dot-on {{ background: var(--success); box-shadow: 0 0 0 3px rgba(34,197,94,0.15); }}
 .dot-off {{ background: var(--danger); box-shadow: 0 0 0 3px rgba(239,68,68,0.15); }}
-
-/* Empty state — sidebar */
 .empty-hint {{
 border: 1px dashed var(--border-strong);
 border-radius: 12px;
@@ -296,8 +259,6 @@ font-size: 12.5px;
 line-height: 1.7;
 background: transparent;
 }}
-
-/* ============ منطقة المحادثة ============ */
 .top-row {{
 display: flex; align-items: center; justify-content: space-between;
 margin-bottom: 18px;
@@ -315,8 +276,6 @@ background: var(--primary-soft); color: var(--primary);
 direction: ltr; letter-spacing: 0.02em;
 white-space: nowrap;
 }}
-
-/* Empty chat state — compact, no oversized hero */
 .empty-chat {{
 display: flex; flex-direction: column; align-items: center; justify-content: center;
 text-align: center;
@@ -331,8 +290,6 @@ margin: 16px 0 6px 0; letter-spacing: -0.01em;
 font-size: 13.5px; color: var(--muted); margin: 0;
 max-width: 400px; line-height: 1.6;
 }}
-
-/* Chat bubbles */
 [data-testid="stChatMessage"] {{
 background: transparent !important;
 border: none !important;
@@ -368,8 +325,6 @@ margin: 0 !important;
 [data-testid="stChatMessageAvatar"] {{
 border-radius: 10px !important;
 }}
-
-/* Source chips */
 .sources {{
 margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px;
 }}
@@ -384,8 +339,6 @@ direction: ltr;
 transition: all .15s ease;
 }}
 .chip:hover {{ transform: translateY(-1px); }}
-
-/* Chat input — floating */
 [data-testid="stChatInput"] {{
 background: var(--card) !important;
 border: 1px solid var(--border-strong) !important;
@@ -413,36 +366,24 @@ border-radius: 10px !important;
 [data-testid="stChatInput"] button:hover {{
 background: var(--primary-hover) !important;
 }}
-
-/* Divider */
 hr, [data-testid="stSidebar"] hr {{
 border-color: var(--border) !important;
 margin: 14px 0 !important;
 }}
-
-/* Alerts */
 [data-testid="stAlert"] {{
 border-radius: 12px !important;
 border: 1px solid var(--border) !important;
 background: var(--card) !important;
 font-size: 13px !important;
 }}
-
-/* Spinner */
 .stSpinner > div {{ border-top-color: var(--primary) !important; }}
-
-/* Animations — subtle only, no flashy effects */
 @keyframes fadeInUp {{
 from {{ opacity: 0; transform: translateY(6px); }}
 to {{ opacity: 1; transform: translateY(0); }}
 }}
-
-/* Arabic/English mixed text handling */
 [data-testid="stChatMessage"] [data-testid="stChatMessageContent"] > div {{
 unicode-bidi: plaintext;
 }}
-
-/* ============ Responsive: Desktop / Tablet / Mobile ============ */
 @media (max-width: 1024px) {{
 .block-container {{ max-width: 100% !important; }}
 }}
@@ -461,11 +402,14 @@ max-width: 90%;
 }}
 </style>"""
 
+# تنظيف الأسطر الفارغة لضمان عدم قطع وسم <style> بواسطة Markdown
+CUSTOM_CSS = "\n".join([line for line in RAW_CSS.splitlines() if line.strip()])
+
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
 
 # ============================================================
-# منطق إدارة الملفات والفهرسة — لم يتغيّر إطلاقًا
+# منطق إدارة الملفات والفهرسة
 # ============================================================
 def rebuild_index():
     all_docs = []
@@ -507,7 +451,6 @@ def remove_file(filename: str) -> None:
 # الشريط الجانبي
 # ============================================================
 with st.sidebar:
-    # Brand
     st.markdown(
         f"""<div class="brand">
 {NEXUS_LOGO_SVG}
@@ -519,7 +462,6 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
 
-    # Upload
     st.markdown('<div class="side-label">Upload</div>', unsafe_allow_html=True)
     uploaded_files = st.file_uploader(
         "Upload documents",
@@ -542,7 +484,6 @@ with st.sidebar:
                 rebuild_index()
             st.rerun()
 
-    # Documents
     st.markdown('<div class="side-label">Documents</div>', unsafe_allow_html=True)
 
     if not st.session_state.file_registry:
@@ -578,7 +519,6 @@ with st.sidebar:
                     st.rerun()
                 st.markdown("</div>", unsafe_allow_html=True)
 
-    # Status
     st.markdown('<div class="side-label">Status</div>', unsafe_allow_html=True)
     engine_on = bool(GROQ_API_KEY)
     dot_class = "dot-on" if engine_on else "dot-off"
@@ -594,7 +534,6 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
 
-    # Settings — clear chat
     if st.session_state.chat_history:
         st.markdown('<div class="side-label">Settings</div>', unsafe_allow_html=True)
         if st.button("🧹  Clear conversation", use_container_width=True, key="clear_chat"):
@@ -613,7 +552,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Empty state — compact, no huge hero / no feature cards
 if not st.session_state.chat_history:
     st.markdown(
         f"""<div class="empty-chat">
@@ -624,7 +562,6 @@ if not st.session_state.chat_history:
         unsafe_allow_html=True,
     )
 
-# History
 for msg in st.session_state.chat_history:
     with st.chat_message(
         msg["role"], avatar="🧠" if msg["role"] == "assistant" else "🧑"
@@ -636,7 +573,6 @@ for msg in st.session_state.chat_history:
             )
             st.markdown(f'<div class="sources">{chips}</div>', unsafe_allow_html=True)
 
-# Input
 query = st.chat_input("Ask a question about your documents…")
 
 if query:
