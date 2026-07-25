@@ -364,7 +364,7 @@ color: #fff !important;
 border-radius: 10px !important;
 }}
 [data-testid="stChatInput"] button:hover {{
-background: var(--primary-hover) !important;
+background:#fff !important;
 }}
 hr, [data-testid="stSidebar"] hr {{
 border-color: var(--border) !important;
