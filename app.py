@@ -324,6 +324,25 @@ border: 1px solid var(--border);
 border-radius: 18px;
 padding: 14px 18px !important;
 box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+color: #FFFFFF !important;
+}}
+[data-testid="stChatMessage"] [data-testid="stChatMessageContent"] *:not(.chip) {{
+color: #FFFFFF !important;
+opacity: 1 !important;
+}}
+[data-testid="stChatMessage"] [data-testid="stChatMessageContent"] strong,
+[data-testid="stChatMessage"] [data-testid="stChatMessageContent"] b,
+[data-testid="stChatMessage"] [data-testid="stChatMessageContent"] h1,
+[data-testid="stChatMessage"] [data-testid="stChatMessageContent"] h2,
+[data-testid="stChatMessage"] [data-testid="stChatMessageContent"] h3 {{
+color: #FFFFFF !important;
+font-weight: 700 !important;
+}}
+[data-testid="stChatMessage"] [data-testid="stChatMessageContent"] code {{
+color: var(--primary) !important;
+background: var(--primary-soft) !important;
+padding: 2px 5px;
+border-radius: 4px;
 }}
 [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {{
 flex-direction: row-reverse;
