@@ -94,6 +94,9 @@ color-scheme: dark;
 html, body, [class*="css"], [class*="st-"] {{
 font-family: 'Inter', 'Cairo', -apple-system, BlinkMacSystemFont, sans-serif !important;
 }}
+[class*="material-"], [data-testid="stIcon"], [data-testid*="stIcon"], [data-testid="stFileUploader"] button span {{
+font-family: 'Material Symbols Outlined', 'Material Icons', sans-serif !important;
+}}
 * {{ unicode-bidi: plaintext; }}
 .stApp {{
 background: var(--bg) !important;
@@ -226,10 +229,12 @@ border: none !important;
 border-radius: 8px !important;
 font-weight: 500 !important;
 transition: all .15s ease !important;
+display: inline-flex !important;
+align-items: center !important;
+gap: 6px !important;
 }}
-[data-testid="stFileUploader"] button:hover {{
-background: var(--primary-hover) !important;
-transform: translateY(-1px);
+[data-testid="stFileUploader"] button span {{
+color: inherit !important;
 }}
 [data-testid="stFileUploaderDropzoneInstructions"] {{
 color: var(--muted) !important;
@@ -351,7 +356,7 @@ border-color: var(--primary) !important;
 box-shadow: 0 0 0 4px var(--primary-ring) !important;
 }}
 [data-testid="stChatInput"] textarea {{
-color: #000 !important;
+color: var(--text) !important;
 font-size: 14.5px !important;
 font-family: 'Inter','Cairo',sans-serif !important;
 }}
@@ -364,7 +369,7 @@ color: #fff !important;
 border-radius: 10px !important;
 }}
 [data-testid="stChatInput"] button:hover {{
-background:#fff !important;
+background: var(--primary-hover) !important;
 }}
 hr, [data-testid="stSidebar"] hr {{
 border-color: var(--border) !important;
