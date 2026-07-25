@@ -85,7 +85,7 @@ NEXUS_LOGO_SVG = get_nexus_logo(32)
 # ============================================================
 # CSS — تصميم احترافي مع إزالة الأسطر الفارغة لمنع أخطاء Markdown
 # ============================================================
-RAW_CSS = f"""<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+RAW_CSS = f"""<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
 <style>
 :root {{
 {_root_vars}
@@ -94,7 +94,7 @@ color-scheme: dark;
 html, body, [class*="css"], [class*="st-"] {{
 font-family: 'Inter', 'Cairo', -apple-system, BlinkMacSystemFont, sans-serif !important;
 }}
-[class*="material-"], [data-testid="stIcon"], [data-testid*="stIcon"], [data-testid="stFileUploader"] button span {{
+[class*="material-"], [data-testid="stIcon"], [data-testid*="stIcon"] {{
 font-family: 'Material Symbols Outlined', 'Material Icons', sans-serif !important;
 }}
 * {{ unicode-bidi: plaintext; }}
@@ -233,8 +233,13 @@ display: inline-flex !important;
 align-items: center !important;
 gap: 6px !important;
 }}
+[data-testid="stFileUploader"] button [data-testid="stIcon"],
+[data-testid="stFileUploader"] button span:first-child {{
+display: none !important;
+}}
 [data-testid="stFileUploader"] button span {{
 color: inherit !important;
+font-family: 'Inter', 'Cairo', sans-serif !important;
 }}
 [data-testid="stFileUploaderDropzoneInstructions"] {{
 color: var(--muted) !important;
