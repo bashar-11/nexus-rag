@@ -218,31 +218,10 @@ transform: translateY(-2px);
 box-shadow: 0 8px 20px -8px var(--primary-ring);
 }}
 [data-testid="stFileUploader"] small,
-[data-testid="stFileUploader"] span {
+[data-testid="stFileUploader"] span {{
 color: var(--muted) !important;
 font-size: 12px !important;
-}
-[data-testid="stFileUploader"] button {
-background: var(--primary) !important;
-color: #fff !important;
-border: none !important;
-border-radius: 8px !important;
-padding: 8px 16px !important;
-font-weight: 500 !important;
-transition: all .15s ease !important;
-}
-[data-testid="stFileUploader"] button * {
-display: none !important;
-}
-[data-testid="stFileUploader"] button::after {
-content: "Upload";
-font-family: 'Inter', 'Cairo', sans-serif !important;
-font-size: 14px;
-color: #ffffff;
-}
-[data-testid="stFileUploaderDropzoneInstructions"] {
-color: var(--muted) !important;
-}
+}}
 [data-testid="stFileUploader"] button {{
 background: var(--primary) !important;
 color: #fff !important;
