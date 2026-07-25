@@ -351,7 +351,7 @@ border-color: var(--primary) !important;
 box-shadow: 0 0 0 4px var(--primary-ring) !important;
 }}
 [data-testid="stChatInput"] textarea {{
-color: #fff !important;
+color: #000 !important;
 font-size: 14.5px !important;
 font-family: 'Inter','Cairo',sans-serif !important;
 }}
