@@ -6,8 +6,12 @@ from src.config import EMBEDDING_MODEL_NAME, EMBEDDING_BATCH_SIZE
 @st.cache_resource(show_spinner=False)
 def get_embedding_function() -> HuggingFaceEmbeddings:
     """
-    تحميل نموذج الـ Embeddings وتخزينه في الذاكرة المؤقتة (Cache)
-    لتجنب استهلاك الـ RAM وإعادة تحميل النموذج عند كل استفسار.
+    Return the shared embedding model.
+
+    The model is loaded once per server process and reused across
+    sessions and reruns. Caching matters here: without it, every
+    Streamlit rerun would reload the weights into RAM, which costs
+    seconds and significant memory each time.
     """
     embeddings = HuggingFaceEmbeddings(
         model_name=EMBEDDING_MODEL_NAME,

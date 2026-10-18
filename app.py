@@ -2,14 +2,14 @@ import os
 from pathlib import Path
 import streamlit as st
 
-# الحفاظ على كافة مسارات ومنطق الاستدعاءات
+# Streamlit configuration
 from src.config import DATA_DIR, GROQ_API_KEY, logger
 from src.document_loader import load_document, split_documents
 from src.vector_store import add_documents_to_vector_store, clear_vector_store
 from src.rag_engine import generate_rag_response
 
 # ============================================================
-# إعداد الصفحة
+# Session state
 # ============================================================
 st.set_page_config(
     page_title="Nexus RAG — Document Intelligence",
@@ -21,7 +21,7 @@ st.set_page_config(
 os.makedirs(DATA_DIR, exist_ok=True)
 
 # ============================================================
-# الحالة (Session State)
+# Session state
 # ============================================================
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
@@ -33,7 +33,7 @@ if "processed_upload_ids" not in st.session_state:
     st.session_state.processed_upload_ids = set()
 
 # ============================================================
-# نظام الألوان — Dark Mode
+# Design tokens — dark mode
 # ============================================================
 TOKENS = {
     "bg": "#09090B",
@@ -58,7 +58,7 @@ TOKENS = {
 _root_vars = "\n".join([f"  --{k}: {v};" for k, v in TOKENS.items()])
 
 # ============================================================
-# اللوجو — علامة Nexus
+# Header
 # ============================================================
 def get_nexus_logo(size: int = 32) -> str:
     return f"""<svg width="{size}" height="{size}" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -83,7 +83,7 @@ def get_nexus_logo(size: int = 32) -> str:
 NEXUS_LOGO_SVG = get_nexus_logo(32)
 
 # ============================================================
-# CSS — تصميم احترافي مع إزالة الأسطر الفارغة لمنع أخطاء Markdown
+# CSS — scoped to the Markdown container so styling does not leak into widgets
 # ============================================================
 RAW_CSS = f"""<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet">
 <style>
@@ -450,14 +450,14 @@ max-width: 90%;
 }}
 </style>"""
 
-# تنظيف الأسطر الفارغة لضمان عدم قطع وسم <style> بواسطة Markdown
+# Strip the <style> block Streamlit injects into Markdown so our CSS controls the chat layout
 CUSTOM_CSS = "\n".join([line for line in RAW_CSS.splitlines() if line.strip()])
 
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
 
 # ============================================================
-# منطق إدارة الملفات والفهرسة
+# Rebuild the index from scratch
 # ============================================================
 def rebuild_index():
     all_docs = []
@@ -466,8 +466,8 @@ def rebuild_index():
             raw_docs = load_document(filepath)
             all_docs.extend(raw_docs)
         except Exception as e:
-            logger.error(f"فشل تحميل الملف {filename}: {e}")
-            st.error(f"⚠️ تعذّرت معالجة الملف: {filename}")
+            logger.error(f"Error loading {filename}: {e}")
+            st.error(f"Could not process {filename}. Please check the file and try again.")
 
     if all_docs:
         chunks = split_documents(all_docs)
@@ -491,12 +491,12 @@ def remove_file(filename: str) -> None:
         try:
             os.remove(filepath)
         except Exception as e:
-            logger.error(f"فشل حذف الملف {filename} من القرص: {e}")
+            logger.error(f"Could not delete {filename} from disk: {e}")
     rebuild_index()
 
 
 # ============================================================
-# الشريط الجانبي
+# Uploaded files
 # ============================================================
 with st.sidebar:
     st.markdown(
@@ -561,7 +561,7 @@ with st.sidebar:
                 )
             with col2:
                 st.markdown('<div class="row-delete">', unsafe_allow_html=True)
-                if st.button("✕", key=f"remove_{filename}", help=f"Remove {filename}"):
+                if st.button("🗑️", key=f"remove_{filename}", help=f"Remove {filename}"):
                     with st.spinner("Updating..."):
                         remove_file(filename)
                     st.rerun()
@@ -584,18 +584,18 @@ with st.sidebar:
 
     if st.session_state.chat_history:
         st.markdown('<div class="side-label">Settings</div>', unsafe_allow_html=True)
-        if st.button("🧹  Clear conversation", use_container_width=True, key="clear_chat"):
+        if st.button("🗑️  Clear conversation", use_container_width=True, key="clear_chat"):
             st.session_state.chat_history = []
             st.rerun()
 
 
 # ============================================================
-# الواجهة الرئيسية
+# Chat interface
 # ============================================================
 st.markdown(
     f"""<div class="top-row">
 <div class="top-title">{NEXUS_LOGO_SVG}<span>Nexus RAG</span></div>
-<div class="top-badge">Hybrid · Cited</div>
+<div class="top-badge">Hybrid AI · Cited</div>
 </div>""",
     unsafe_allow_html=True,
 )
@@ -612,7 +612,7 @@ if not st.session_state.chat_history:
 
 for msg in st.session_state.chat_history:
     with st.chat_message(
-        msg["role"], avatar="🧠" if msg["role"] == "assistant" else "🧑"
+        msg["role"], avatar="🧠" if msg["role"] == "assistant" else "👤"
     ):
         st.markdown(f'<div dir="auto">{msg["content"]}</div>', unsafe_allow_html=True)
         if msg.get("sources"):
@@ -625,12 +625,12 @@ query = st.chat_input("Ask a question about your documents…")
 
 if query:
     if not st.session_state.file_registry:
-        st.warning("⚠️ Please upload at least one document before asking questions.")
+        st.warning("Please upload at least one document before asking questions.")
     elif not GROQ_API_KEY:
-        st.error("⚠️ GROQ_API_KEY is not set. Cannot generate an answer.")
+        st.error("GROQ_API_KEY is not set. Cannot generate an answer.")
     else:
         st.session_state.chat_history.append({"role": "user", "content": query})
-        with st.chat_message("user", avatar="🧑"):
+        with st.chat_message("user", avatar="👤"):
             st.markdown(f'<div dir="auto">{query}</div>', unsafe_allow_html=True)
 
         with st.chat_message("assistant", avatar="🧠"):

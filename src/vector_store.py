@@ -22,11 +22,14 @@ from src.embeddings import get_embedding_function
 
 
 # ============================================================
-# اتصال Qdrant الأساسي
+# Qdrant client and collection
 # ============================================================
 def get_qdrant_client() -> QdrantClient:
     if not QDRANT_URL or not QDRANT_API_KEY:
-        raise ValueError("لم يتم ضبط QDRANT_URL أو QDRANT_API_KEY في البيئة أو Secrets.")
+        raise ValueError(
+            "QDRANT_URL and QDRANT_API_KEY are required. Set them in .env "
+            "or in Streamlit Cloud Secrets."
+        )
     return QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
 
 
@@ -37,11 +40,11 @@ def _ensure_collection(client: QdrantClient) -> None:
             collection_name=COLLECTION_NAME,
             vectors_config=VectorParams(size=EMBEDDING_DIM, distance=Distance.COSINE),
         )
-        logger.info(f"تم إنشاء مجموعة Qdrant جديدة: {COLLECTION_NAME}")
+        logger.info(f"Created Qdrant collection: {COLLECTION_NAME}")
 
 
 def get_vector_store() -> QdrantVectorStore:
-    """إرجاع كائن QdrantVectorStore جاهز للاستخدام، مع إنشاء المجموعة لو مش موجودة."""
+    """Open the Qdrant-backed vector store, creating the collection if needed."""
     client = get_qdrant_client()
     _ensure_collection(client)
     return QdrantVectorStore(
@@ -52,22 +55,27 @@ def get_vector_store() -> QdrantVectorStore:
 
 
 def clear_vector_store() -> None:
-    """حذف مجموعة Qdrant بالكامل — تُستخدم قبل إعادة الفهرسة الكاملة."""
+    """
+    Drop the collection entirely. This is the cleanest reset: it removes
+    the Qdrant index and forces a full rebuild on the next upload.
+    """
     try:
         client = get_qdrant_client()
         collections = [c.name for c in client.get_collections().collections]
         if COLLECTION_NAME in collections:
             client.delete_collection(collection_name=COLLECTION_NAME)
-            logger.info(f"تم مسح مجموعة Qdrant: {COLLECTION_NAME}")
+            logger.info(f"Deleted Qdrant collection: {COLLECTION_NAME}")
     except Exception as e:
-        logger.error(f"خطأ أثناء مسح قاعدة البيانات: {e}")
+        logger.error(f"Could not clear the vector store: {e}")
 
 
 def add_documents_to_vector_store(documents: List[Document], reset: bool = True) -> QdrantVectorStore:
     """
-    إضافة مستندات إلى Qdrant Cloud.
-    reset=True (الافتراضي) يمسح المجموعة بالكامل أولاً حتى تبقى متسقة تمامًا
-    مع قائمة الملفات الظاهرة في الواجهة (بدون تراكم مستندات قديمة/محذوفة).
+    Index documents in Qdrant Cloud.
+
+    With reset=True the collection is dropped first, so repeated uploads
+    never accumulate duplicates. With reset=False, new chunks are appended
+    to whatever is already indexed (useful when incrementally adding files).
     """
     if reset:
         clear_vector_store()
@@ -75,12 +83,12 @@ def add_documents_to_vector_store(documents: List[Document], reset: bool = True)
     vector_store = get_vector_store()
     if documents:
         vector_store.add_documents(documents)
-        logger.info(f"تمت إضافة {len(documents)} مقطع إلى Qdrant (reset={reset})")
+        logger.info(f"Indexed {len(documents)} chunks in Qdrant (reset={reset})")
     return vector_store
 
 
 # ============================================================
-# الاسترجاع الهجين (Semantic عبر Qdrant + BM25) مدموج بـ RRF
+# Hybrid retrieval: dense vectors (Qdrant) + lexical BM25, fused with RRF
 # ============================================================
 def _doc_key(doc: Document) -> str:
     source = doc.metadata.get("source", "")
@@ -98,7 +106,7 @@ def _semantic_search(query: str, fetch_k: int) -> List[Document]:
         scored_docs = vector_store.similarity_search_with_relevance_scores(query, k=fetch_k)
         return [doc for doc, score in scored_docs if score >= SIMILARITY_SCORE_THRESHOLD]
     except Exception as e:
-        logger.error(f"فشل البحث الدلالي عبر Qdrant: {e}")
+        logger.error(f"Semantic search failed (Qdrant): {e}")
         return []
 
 
@@ -108,13 +116,20 @@ def _bm25_search(query: str, documents: List[Document], fetch_k: int) -> List[Do
         bm25_retriever.k = fetch_k
         return bm25_retriever.invoke(query)
     except Exception as e:
-        logger.error(f"فشل البحث النصي (BM25): {e}")
+        logger.error(f"Keyword search failed (BM25): {e}")
         return []
 
 
 def reciprocal_rank_fusion(
     result_lists: List[List[Document]], k: int = RRF_K, top_k: int = TOP_K
 ) -> List[Document]:
+    """
+    Merge ranked lists with Reciprocal Rank Fusion.
+
+    Each document scores 1 / (k + rank) in every list it appears in, and the
+    scores are summed. RRF fuses on rank position only, so sparse and dense
+    retrievers do not need their scores placed on a common scale.
+    """
     scores: Dict[str, float] = {}
     doc_map: Dict[str, Document] = {}
 
@@ -142,7 +157,10 @@ def get_hybrid_documents(
     bm25_docs = _bm25_search(query, documents, fetch_k)
 
     if not vector_docs and not bm25_docs:
-        logger.warning("لم يُرجع أي من محركي الاسترجاع (Qdrant/BM25) أي نتائج لهذا السؤال")
+        logger.warning(
+            f"No results for query: {query!r}. Both retrievers (Qdrant and BM25) "
+            "returned nothing."
+        )
         return []
 
     return reciprocal_rank_fusion([vector_docs, bm25_docs], top_k=top_k)

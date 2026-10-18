@@ -10,7 +10,8 @@ from src.vector_store import get_hybrid_documents
 def get_llm() -> ChatGroq:
     if not GROQ_API_KEY:
         raise ValueError(
-            "GROQ_API_KEY مفقود. تأكد من ضبطه في ملف .env قبل استخدام النظام."
+            "GROQ_API_KEY is missing. Set it in your .env file or in "
+            "Streamlit Cloud Secrets."
         )
 
     return ChatGroq(
@@ -43,34 +44,53 @@ Answer:"""
     return PromptTemplate(template=template, input_variables=["context", "question"])
 
 
-# كلمات مفتاحية تدل على أن السؤال عام (طلب ملخص/نظرة عامة) وليس سؤالًا محددًا
+# Keywords that signal the user wants a summary of the whole document
+# rather than a specific fact. Matched with lookaround guards, case-insensitive,
+# against both English and Arabic so the bilingual UI behaves the same way.
+#
+# Note on Arabic: the bare interrogatives "ما هو" / "ما هي" are deliberately
+# absent. They open almost every Arabic question, including plain factual ones
+# such as "ما هي النتائج في التقرير؟" (what are the results in the report?).
+# Only the self-referential forms are listed, which unambiguously mean "tell me
+# about this document".
 _OVERVIEW_KEYWORDS = [
-    "summary", "summarize", "overview", "about", "main topic", "what is this",
-    "ملخص", "تلخيص", "عن ماذا", "موضوع", "فكرة", "محتوى", "شرح",
+    # English
+    "summary", "summarize", "summarise", "overview", "about", "main topic",
+    "what is this", "key points", "highlights", "brief",
+    # Arabic
+    "ملخص", "لخص", "تلخيص", "نظرة عامة", "اشرح", "اختصر", "باختصار",
+    "أهم", "أبرز", "ماذا", "ما هو هذا", "ما هي هذه", "ما هذا",
 ]
-# نبني regex بحدود كلمة (\b) لتجنب مطابقة جزئية خاطئة داخل كلمات أخرى
+
+# Compile once so the pattern is not rebuilt on every query.
+# Lookaround guards rather than \b: they behave correctly for Arabic, where a
+# keyword such as "نتائج" must not match inside the longer word "النتائج", and
+# where \b interacts badly with non-ASCII word characters.
 _OVERVIEW_PATTERN = re.compile(
-    r"(" + "|".join(re.escape(kw) for kw in _OVERVIEW_KEYWORDS) + r")",
-    flags=re.IGNORECASE,
+    r"(?<!\w)(?:" + "|".join(re.escape(kw) for kw in _OVERVIEW_KEYWORDS) + r")(?!\w)",
+    flags=re.IGNORECASE | re.UNICODE,
 )
 
 
 def is_overview_query(query: str) -> bool:
-    """التحقق مما إذا كان السؤال يتطلب نظرة عامة أو ملخصًا للمستند"""
+    """Return True when the user is asking for a summary rather than a fact."""
     return bool(_OVERVIEW_PATTERN.search(query))
 
 
 def _format_context(documents: List[Document]) -> str:
     """
-    تنسيق المقاطع المسترجعة كسياق واحد، مع ذكر المصدر ورقم الصفحة
-    (إن وُجد) لكل مقطع — يساعد الـ LLM على تمييز المصادر ويقلل من
-    خلط المعلومات بين مستندات مختلفة.
+    Build the context block handed to the model.
+
+    Each passage is prefixed with its source file (and page, for PDFs) so the
+    answer can be traced back to an exact location, and passages are separated
+    by a clear delimiter to keep the model from treating them as continuous
+    prose.
     """
     parts = []
     for doc in documents:
-        source = doc.metadata.get("source", "مستند")
+        source = doc.metadata.get("source", "unknown source")
         page = doc.metadata.get("page")
-        label = f"{source} - صفحة {page}" if page else source
+        label = f"{source} — page {page}" if page else source
         parts.append(f"[{label}]\n{doc.page_content}")
     return "\n\n---\n\n".join(parts)
 
@@ -78,15 +98,16 @@ def _format_context(documents: List[Document]) -> str:
 def generate_rag_response(query: str, documents: List[Document], top_k: int = TOP_K) -> Dict[str, Any]:
     if not documents:
         return {
-            "answer": "⚠️ No documents uploaded to search from.",
+            "answer": "No documents have been uploaded yet. Upload a PDF or TXT file to get started.",
             "source_documents": [],
         }
 
-    # 1. الاسترجاع الهجين (Semantic + BM25 مدموجة عبر RRF)
+    # 1. Retrieve with hybrid search (semantic + BM25, fused with RRF).
     relevant_docs = get_hybrid_documents(query, documents, top_k=top_k, fetch_k=FETCH_K)
 
-    # 2. لو السؤال عام (Summary / Overview)، نضيف أول مقاطع المستند لضمان
-    #    توفر سياق عام حتى لو الاسترجاع الهجين ركّز على تفاصيل جزئية
+    # 2. Broad questions ("summarise this") do not match any single chunk well,
+    #    because the answer is spread across the whole document. Inject the
+    #    opening chunks so the model has the framing it needs.
     if is_overview_query(query):
         existing_keys = {(d.metadata.get("source"), d.metadata.get("chunk_index")) for d in relevant_docs}
         for doc in documents[:2]:
@@ -96,16 +117,16 @@ def generate_rag_response(query: str, documents: List[Document], top_k: int = TO
                 existing_keys.add(doc_key)
 
     if not relevant_docs:
-        logger.warning(f"لم يتم العثور على أي مقاطع ذات صلة للسؤال: {query!r}")
+        logger.warning(f"No relevant sections found for query: {query!r}")
         return {
             "answer": "Could not find relevant sections in the document.",
             "source_documents": [],
         }
 
-    # 3. تجميع السياق مع معلومات المصدر/الصفحة
+    # 3. Format the retrieved passages into a single context block.
     context_text = _format_context(relevant_docs)
 
-    # 4. التوليد عبر Groq
+    # 4. Generate the answer with Groq.
     prompt_template = build_prompt_template()
     formatted_prompt = prompt_template.format(context=context_text, question=query)
 
