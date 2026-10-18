@@ -1,12 +1,13 @@
 import os
 from pathlib import Path
+
 import streamlit as st
 
 # Streamlit configuration
 from src.config import DATA_DIR, GROQ_API_KEY, logger
 from src.document_loader import load_document, split_documents
-from src.vector_store import add_documents_to_vector_store, clear_vector_store
 from src.rag_engine import generate_rag_response
+from src.vector_store import add_documents_to_vector_store, clear_vector_store
 
 # ============================================================
 # Session state
@@ -57,6 +58,7 @@ TOKENS = {
 }
 _root_vars = "\n".join([f"  --{k}: {v};" for k, v in TOKENS.items()])
 
+
 # ============================================================
 # Header
 # ============================================================
@@ -79,6 +81,7 @@ def get_nexus_logo(size: int = 32) -> str:
 <line x1="20" y1="20" x2="10" y2="30" stroke="#FFFFFF" stroke-width="1.4" opacity="0.8"/>
 <line x1="20" y1="20" x2="30" y2="30" stroke="#FFFFFF" stroke-width="1.4" opacity="0.8"/>
 </svg>"""
+
 
 NEXUS_LOGO_SVG = get_nexus_logo(32)
 
@@ -465,9 +468,11 @@ def rebuild_index():
         try:
             raw_docs = load_document(filepath)
             all_docs.extend(raw_docs)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - one bad file must not crash the app
             logger.error(f"Error loading {filename}: {e}")
-            st.error(f"Could not process {filename}. Please check the file and try again.")
+            st.error(
+                f"Could not process {filename}. Please check the file and try again."
+            )
 
     if all_docs:
         chunks = split_documents(all_docs)
@@ -490,7 +495,7 @@ def remove_file(filename: str) -> None:
     if filepath and os.path.exists(filepath):
         try:
             os.remove(filepath)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - one bad file must not crash the app
             logger.error(f"Could not delete {filename} from disk: {e}")
     rebuild_index()
 
@@ -584,7 +589,9 @@ with st.sidebar:
 
     if st.session_state.chat_history:
         st.markdown('<div class="side-label">Settings</div>', unsafe_allow_html=True)
-        if st.button("🗑️  Clear conversation", use_container_width=True, key="clear_chat"):
+        if st.button(
+            "🗑️  Clear conversation", use_container_width=True, key="clear_chat"
+        ):
             st.session_state.chat_history = []
             st.rerun()
 

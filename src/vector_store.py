@@ -1,21 +1,20 @@
-from typing import List, Dict
-from langchain_core.documents import Document
 from langchain_community.retrievers import BM25Retriever
+from langchain_core.documents import Document
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import Distance, VectorParams
 
 from src.config import (
-    QDRANT_URL,
-    QDRANT_API_KEY,
     COLLECTION_NAME,
     EMBEDDING_DIM,
-    TOP_K,
     FETCH_K,
+    MMR_LAMBDA,
+    QDRANT_API_KEY,
+    QDRANT_URL,
     RRF_K,
     SIMILARITY_SCORE_THRESHOLD,
+    TOP_K,
     USE_MMR,
-    MMR_LAMBDA,
     logger,
 )
 from src.embeddings import get_embedding_function
@@ -65,11 +64,13 @@ def clear_vector_store() -> None:
         if COLLECTION_NAME in collections:
             client.delete_collection(collection_name=COLLECTION_NAME)
             logger.info(f"Deleted Qdrant collection: {COLLECTION_NAME}")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - Qdrant may be unreachable; degrade instead of failing the request
         logger.error(f"Could not clear the vector store: {e}")
 
 
-def add_documents_to_vector_store(documents: List[Document], reset: bool = True) -> QdrantVectorStore:
+def add_documents_to_vector_store(
+    documents: list[Document], reset: bool = True
+) -> QdrantVectorStore:
     """
     Index documents in Qdrant Cloud.
 
@@ -96,33 +97,37 @@ def _doc_key(doc: Document) -> str:
     return f"{source}::{chunk_idx}::{doc.page_content.strip()[:200]}"
 
 
-def _semantic_search(query: str, fetch_k: int) -> List[Document]:
+def _semantic_search(query: str, fetch_k: int) -> list[Document]:
     try:
         vector_store = get_vector_store()
         if USE_MMR:
             return vector_store.max_marginal_relevance_search(
                 query, k=fetch_k, fetch_k=max(fetch_k * 3, 20), lambda_mult=MMR_LAMBDA
             )
-        scored_docs = vector_store.similarity_search_with_relevance_scores(query, k=fetch_k)
-        return [doc for doc, score in scored_docs if score >= SIMILARITY_SCORE_THRESHOLD]
-    except Exception as e:
+        scored_docs = vector_store.similarity_search_with_relevance_scores(
+            query, k=fetch_k
+        )
+        return [
+            doc for doc, score in scored_docs if score >= SIMILARITY_SCORE_THRESHOLD
+        ]
+    except Exception as e:  # noqa: BLE001 - boundary failure must not crash the app
         logger.error(f"Semantic search failed (Qdrant): {e}")
         return []
 
 
-def _bm25_search(query: str, documents: List[Document], fetch_k: int) -> List[Document]:
+def _bm25_search(query: str, documents: list[Document], fetch_k: int) -> list[Document]:
     try:
         bm25_retriever = BM25Retriever.from_documents(documents)
         bm25_retriever.k = fetch_k
         return bm25_retriever.invoke(query)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - lexical search failure must degrade to the other retriever
         logger.error(f"Keyword search failed (BM25): {e}")
         return []
 
 
 def reciprocal_rank_fusion(
-    result_lists: List[List[Document]], k: int = RRF_K, top_k: int = TOP_K
-) -> List[Document]:
+    result_lists: list[list[Document]], k: int = RRF_K, top_k: int = TOP_K
+) -> list[Document]:
     """
     Merge ranked lists with Reciprocal Rank Fusion.
 
@@ -130,8 +135,8 @@ def reciprocal_rank_fusion(
     scores are summed. RRF fuses on rank position only, so sparse and dense
     retrievers do not need their scores placed on a common scale.
     """
-    scores: Dict[str, float] = {}
-    doc_map: Dict[str, Document] = {}
+    scores: dict[str, float] = {}
+    doc_map: dict[str, Document] = {}
 
     for results in result_lists:
         for rank, doc in enumerate(results):
@@ -148,8 +153,8 @@ def reciprocal_rank_fusion(
 
 
 def get_hybrid_documents(
-    query: str, documents: List[Document], top_k: int = TOP_K, fetch_k: int = FETCH_K
-) -> List[Document]:
+    query: str, documents: list[Document], top_k: int = TOP_K, fetch_k: int = FETCH_K
+) -> list[Document]:
     if not documents:
         return []
 

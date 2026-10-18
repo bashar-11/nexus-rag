@@ -1,6 +1,7 @@
 import streamlit as st
 from langchain_huggingface import HuggingFaceEmbeddings
-from src.config import EMBEDDING_MODEL_NAME, EMBEDDING_BATCH_SIZE
+
+from src.config import EMBEDDING_BATCH_SIZE, EMBEDDING_MODEL_NAME
 
 
 @st.cache_resource(show_spinner=False)

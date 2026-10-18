@@ -12,7 +12,9 @@ from src.vector_store import reciprocal_rank_fusion
 
 
 def doc(text, source="a.pdf", chunk=0):
-    return Document(page_content=text, metadata={"source": source, "chunk_index": chunk})
+    return Document(
+        page_content=text, metadata={"source": source, "chunk_index": chunk}
+    )
 
 
 class TestReciprocalRankFusion:
@@ -38,7 +40,9 @@ class TestReciprocalRankFusion:
         shared = doc("agreed by both", chunk=1)
         filler_a = doc("dense first", chunk=2)
         filler_b = doc("lexical first", chunk=3)
-        result = reciprocal_rank_fusion([[filler_a, shared], [filler_b, shared]], top_k=10)
+        result = reciprocal_rank_fusion(
+            [[filler_a, shared], [filler_b, shared]], top_k=10
+        )
         assert result[0].page_content == "agreed by both"
 
     def test_two_rank_zero_documents_score_equally(self):
@@ -57,7 +61,9 @@ class TestReciprocalRankFusion:
         assert result[0].page_content == "ranked first"
 
     def test_skips_blank_documents(self):
-        result = reciprocal_rank_fusion([[doc("   ", chunk=1), doc("real", chunk=2)]], top_k=10)
+        result = reciprocal_rank_fusion(
+            [[doc("   ", chunk=1), doc("real", chunk=2)]], top_k=10
+        )
         assert [d.page_content for d in result] == ["real"]
 
     def test_empty_content_is_never_ranked(self):

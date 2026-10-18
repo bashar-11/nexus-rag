@@ -1,9 +1,11 @@
-import os
 import logging
+import os
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 load_dotenv()
+
 
 # ---------------------------------------------------------
 # Resolution order for every setting: local .env file, then
@@ -16,8 +18,9 @@ def _get_setting(key: str, default=None):
         return value
     try:
         import streamlit as st
+
         return st.secrets.get(key, default)
-    except Exception:
+    except Exception:  # noqa: BLE001 - Streamlit secrets are unavailable outside a Streamlit runtime
         return default
 
 

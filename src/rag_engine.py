@@ -1,9 +1,11 @@
 import re
-from typing import Dict, Any, List
-from langchain_groq import ChatGroq
-from langchain_core.prompts import PromptTemplate
+from typing import Any
+
 from langchain_core.documents import Document
-from src.config import GROQ_API_KEY, GROQ_LLM_MODEL, TOP_K, FETCH_K, logger
+from langchain_core.prompts import PromptTemplate
+from langchain_groq import ChatGroq
+
+from src.config import FETCH_K, GROQ_API_KEY, GROQ_LLM_MODEL, TOP_K, logger
 from src.vector_store import get_hybrid_documents
 
 
@@ -55,11 +57,30 @@ Answer:"""
 # about this document".
 _OVERVIEW_KEYWORDS = [
     # English
-    "summary", "summarize", "summarise", "overview", "about", "main topic",
-    "what is this", "key points", "highlights", "brief",
+    "summary",
+    "summarize",
+    "summarise",
+    "overview",
+    "about",
+    "main topic",
+    "what is this",
+    "key points",
+    "highlights",
+    "brief",
     # Arabic
-    "ملخص", "لخص", "تلخيص", "نظرة عامة", "اشرح", "اختصر", "باختصار",
-    "أهم", "أبرز", "ماذا", "ما هو هذا", "ما هي هذه", "ما هذا",
+    "ملخص",
+    "لخص",
+    "تلخيص",
+    "نظرة عامة",
+    "اشرح",
+    "اختصر",
+    "باختصار",
+    "أهم",
+    "أبرز",
+    "ماذا",
+    "ما هو هذا",
+    "ما هي هذه",
+    "ما هذا",
 ]
 
 # Compile once so the pattern is not rebuilt on every query.
@@ -77,7 +98,7 @@ def is_overview_query(query: str) -> bool:
     return bool(_OVERVIEW_PATTERN.search(query))
 
 
-def _format_context(documents: List[Document]) -> str:
+def _format_context(documents: list[Document]) -> str:
     """
     Build the context block handed to the model.
 
@@ -95,7 +116,9 @@ def _format_context(documents: List[Document]) -> str:
     return "\n\n---\n\n".join(parts)
 
 
-def generate_rag_response(query: str, documents: List[Document], top_k: int = TOP_K) -> Dict[str, Any]:
+def generate_rag_response(
+    query: str, documents: list[Document], top_k: int = TOP_K
+) -> dict[str, Any]:
     if not documents:
         return {
             "answer": "No documents have been uploaded yet. Upload a PDF or TXT file to get started.",
@@ -109,7 +132,10 @@ def generate_rag_response(query: str, documents: List[Document], top_k: int = TO
     #    because the answer is spread across the whole document. Inject the
     #    opening chunks so the model has the framing it needs.
     if is_overview_query(query):
-        existing_keys = {(d.metadata.get("source"), d.metadata.get("chunk_index")) for d in relevant_docs}
+        existing_keys = {
+            (d.metadata.get("source"), d.metadata.get("chunk_index"))
+            for d in relevant_docs
+        }
         for doc in documents[:2]:
             doc_key = (doc.metadata.get("source"), doc.metadata.get("chunk_index"))
             if doc_key not in existing_keys:

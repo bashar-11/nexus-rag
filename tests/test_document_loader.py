@@ -45,8 +45,12 @@ class TestLoadDocument:
             os.unlink(path)
 
     def test_loads_txt_with_source_metadata(self):
-        content = "Retrieval augmented generation combines search with generation.\n" * 5
-        with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8") as fh:
+        content = (
+            "Retrieval augmented generation combines search with generation.\n" * 5
+        )
+        with tempfile.NamedTemporaryFile(
+            "w", suffix=".txt", delete=False, encoding="utf-8"
+        ) as fh:
             fh.write(content)
             path = fh.name
         try:
@@ -57,7 +61,9 @@ class TestLoadDocument:
             os.unlink(path)
 
     def test_drops_content_too_short_to_be_meaningful(self):
-        with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8") as fh:
+        with tempfile.NamedTemporaryFile(
+            "w", suffix=".txt", delete=False, encoding="utf-8"
+        ) as fh:
             fh.write("hi\n")  # under the 10 character minimum
             path = fh.name
         try:
@@ -67,7 +73,7 @@ class TestLoadDocument:
 
     def test_survives_non_utf8_text(self):
         with tempfile.NamedTemporaryFile("wb", suffix=".txt", delete=False) as fh:
-            fh.write("valid ascii text that is long enough.\n".encode("utf-8"))
+            fh.write(b"valid ascii text that is long enough.\n")
             fh.write(b"\xff\xfe\x00 invalid bytes \x81\x82")
             path = fh.name
         try:
@@ -96,7 +102,9 @@ class TestSplitDocuments:
         chunks = split_documents([self._doc(text, "a.txt"), self._doc(text, "b.txt")])
         by_source = {}
         for c in chunks:
-            by_source.setdefault(c.metadata["source"], []).append(c.metadata["chunk_index"])
+            by_source.setdefault(c.metadata["source"], []).append(
+                c.metadata["chunk_index"]
+            )
         for indices in by_source.values():
             assert indices == list(range(1, len(indices) + 1))
 

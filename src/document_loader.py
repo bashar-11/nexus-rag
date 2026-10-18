@@ -1,11 +1,12 @@
 import os
 import re
 from pathlib import Path
-from typing import List
+
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
-from src.config import CHUNK_SIZE, CHUNK_OVERLAP, logger
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+from src.config import CHUNK_OVERLAP, CHUNK_SIZE, logger
 
 
 def _clean_text(text: str) -> str:
@@ -25,7 +26,7 @@ def _clean_text(text: str) -> str:
     return text.strip()
 
 
-def _load_txt(file_path: str, file_name: str) -> List[Document]:
+def _load_txt(file_path: str, file_name: str) -> list[Document]:
     """
     Read a text file, tolerating non-UTF-8 bytes.
 
@@ -47,7 +48,7 @@ def _load_txt(file_path: str, file_name: str) -> List[Document]:
         return [Document(page_content=text, metadata={"source": file_name})]
 
 
-def load_document(file_path: str) -> List[Document]:
+def load_document(file_path: str) -> list[Document]:
     """
     Load a PDF or TXT file into LangChain Documents.
 
@@ -60,7 +61,7 @@ def load_document(file_path: str) -> List[Document]:
         raise FileNotFoundError(f"File not found: {file_path}")
 
     file_name = os.path.basename(file_path)
-    docs: List[Document] = []
+    docs: list[Document] = []
 
     if file_path.endswith(".pdf"):
         loader = PyPDFLoader(file_path)
@@ -96,7 +97,7 @@ def load_document(file_path: str) -> List[Document]:
     return docs
 
 
-def split_documents(documents: List[Document]) -> List[Document]:
+def split_documents(documents: list[Document]) -> list[Document]:
     """
     Split documents into overlapping chunks.
 
